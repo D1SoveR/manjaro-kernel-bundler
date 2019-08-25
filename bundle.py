@@ -8,11 +8,17 @@ import os.path
 import subprocess
 import tempfile
 
+DESTINATION = "/home/d1sover/kernels"
+
 def run(command):
 
 	proc = subprocess.run(command, stdin=None, capture_output=True, check=True, encoding="utf8")
 	return proc.stdout.strip()
 
+def envfile_to_params(content):
+
+	params = filter(lambda x: len(x) == 2, map(lambda x: x.split("="), content.splitlines()))
+	return { k: v[1:-1] if v.startswith('"') and v.endswith('"') else v for (k, v) in params }
 
 def initialise_db():
 
@@ -28,17 +34,13 @@ def initialise_db():
 		if item.is_file() and item.name.endswith(".preset"):
 
 			identifier = os.path.splitext(item.name)[0]
-			db[identifier] = {
-				"bundles": get_existing_bundles(identifier)
-			}
+			db[identifier] = {}
+			db[identifier]["latest_timestamp"], db[identifier]["bundles"] = get_existing_bundles(identifier)
 
 			with open(item.path, mode="rt", encoding="utf8") as fp:
-				params = filter(lambda x: len(x) == 2, map(lambda x: x.split("="), fp.read().splitlines()))
-				for (key, value) in params:
-					if key == "ALL_kver":
-						db[identifier]["kernel"] = value[1:-1]
-					elif key == "default_image":
-						db[identifier]["initramfs"] = value[1:-1]
+				params = envfile_to_params(fp.read())
+				db[identifier]["kernel"] = params["ALL_kver"]
+				db[identifier]["initramfs"] = params["default_image"]
 
 	return db
 
@@ -50,10 +52,23 @@ def get_existing_bundles(key):
 	information about kernels for that version.
 	"""
 
-	if os.path.isdir("/boot/efi/EFI/Manjaro/{0}".format(key)):
-		raise Exception("Haven't done that bit yet!")
-	else:
-		return []
+	timestamp = 0
+	bundles = []
+
+	bundles_dir = "{0}/{1}".format(DESTINATION, key)
+	if os.path.isdir(bundles_dir):
+		for item in os.scandir(bundles_dir):
+			if item.is_file() and item.name.endswith(".efi"):
+
+				bundles.append(item.name)
+				with tempfile.NamedTemporaryFile(mode="rt", encoding="utf8") as osrelfp:
+					run(["objcopy", "--dump-section", ".osrel={0}".format(osrelfp.name), item.path])
+					osrelfp.seek(0)
+
+					params = envfile_to_params(osrelfp.read())
+					timestamp = max(timestamp, int(params["BUILD_ID"]))
+
+	return (timestamp, bundles)
 
 def get_version_from_kver(key):
 
@@ -79,7 +94,7 @@ def create_bundle(key, db_entry):
 			tmpfiles["os_release"].write(fp.read())
 
 		kernel_version = get_version_from_kver(key)
-		print('"VERSION="{0}"'.format(kernel_version), file=tmpfiles["os_release"])
+		print('VERSION="{0}"'.format(kernel_version), file=tmpfiles["os_release"])
 		del kernel_version
 
 		timestamp = math.floor(max(
@@ -113,7 +128,8 @@ def create_bundle(key, db_entry):
 
 		# Put all of the files together into a bundle
 		print("Generating the kernel bundle...")
-		output = "/home/d1sover/kernel-{1}.efi".format(key, timestamp)
+		os.makedirs("{0}/{1}".format(DESTINATION, key))
+		output = "{0}/{1}/kernel-{2}.efi".format(DESTINATION, key, timestamp)
 		run([
 			"objcopy",
 			"--add-section", ".osrel={0}".format(tmpfiles["os_release"].name), "--change-section-vma", ".osrel=0x20000",
@@ -123,7 +139,7 @@ def create_bundle(key, db_entry):
 			"/usr/lib/systemd/boot/efi/linuxx64.efi.stub",
 			output
 		])
-		print("Kernel bundle created at {0}".format(output))
+		print("Kernel bundle created at {0}\n".format(output))
 
 	except subprocess.CalledProcessError as e:
 		print("Following issue while bundling:")
@@ -151,14 +167,13 @@ if __name__ == "__main__":
 	# List all the present kernels
 	if args.command == "list":
 
-		print(db)
-		exit(0)
-
 		if len(db):
 			print("Following kernels are available:")
-			for (preset, kernels) in db.items():
-				if len(kernels):
-					pass
+			for (preset, preset_info) in db.items():
+				if len(preset_info["bundles"]):
+					print(" * Following bundles exist for {0}:".format(preset))
+					for name in preset_info["bundles"]:
+						print("   - {0}".format(name))
 				else:
 					print(" * {0}: No kernel bundles at a time".format(preset))
 		else:
