@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from util import run, envfile_to_params
 import argparse
 import gzip
 import math
@@ -9,16 +10,6 @@ import subprocess
 import tempfile
 
 DESTINATION = "/home/d1sover/kernels"
-
-def run(command):
-
-	proc = subprocess.run(command, stdin=None, capture_output=True, check=True, encoding="utf8")
-	return proc.stdout.strip()
-
-def envfile_to_params(content):
-
-	params = filter(lambda x: len(x) == 2, map(lambda x: x.split("="), content.splitlines()))
-	return { k: v[1:-1] if v.startswith('"') and v.endswith('"') else v for (k, v) in params }
 
 def initialise_db():
 
