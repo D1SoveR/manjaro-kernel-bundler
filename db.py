@@ -67,7 +67,7 @@ class KernelPreset():
 
 		return KernelPreset(preset, bundles, root_path, path_kernel, path_initramfs)
 
-def initialise_db(root_path):
+def initialise(root_path):
 
 	db = {}
 
