@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-from bundle import generate_bundle_for_preset
+from bundle import generate_bundle_for_preset, make_currently_used, delete_old_bundles
 from db import initialise
 
 def command_list(input):
@@ -35,4 +35,10 @@ if __name__ == "__main__":
 	elif params.command == "bundle":
 
 		for preset in db.values():
-			generate_bundle_for_preset(preset)
+			new_bundle = generate_bundle_for_preset(preset)
+			if new_bundle:
+				new_bundle.preset = preset
+				preset.bundles.append(new_bundle)
+				if preset.currently_used:
+					make_currently_used(preset)
+				delete_old_bundles(preset, 3)

@@ -8,8 +8,9 @@ import subprocess
 from db import KernelBundle
 import gzip
 from math import floor
-from os import makedirs, stat
+from os import makedirs, remove, stat
 from os.path import join
+from shutil import copyfile, rmtree
 from tempfile import NamedTemporaryFile
 from util import run, TempFileMap
 
@@ -92,3 +93,25 @@ def generate_bundle_for_preset(preset):
 			print("kernel bundle generated at {0}\n".format(output_file))
 
 		return KernelBundle(bundle_name, current_build_id, None)
+
+def make_currently_used(preset):
+
+	if len(preset.bundles):
+		latest_bundle = preset.bundles[-1]
+		copyfile(latest_bundle.path, join(preset.path_root, "kernel.efi"))
+		print("Made {0} of {1} preset currently used kernel bundle".format(latest_bundle.name, preset.name))
+	else:
+		print("{0} preset has no kernel bundles, skipping...".format(preset.name))
+
+def delete_old_bundles(preset, number_to_keep=1):
+
+	if len(preset.bundles) > number_to_keep:
+
+		bundles_to_delete = preset.bundles[:-number_to_keep]
+		preset.bundles = preset.bundles[-number_to_keep:]
+
+		for bundle in bundles_to_delete:
+			os.remove(bundle.path)
+			if bundle.fallback:
+				rmtree(bundle.fallback)
+		print("removed {0} outdated bundles for {1} preset".format(len(bundles_to_delete, preset.name)))

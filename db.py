@@ -1,5 +1,6 @@
+from filecmp import cmp
 from os import scandir
-from os.path import basename, isfile, isdir, splitext
+from os.path import basename, isfile, isdir, join, splitext
 from util import run, envfile_to_params
 from tempfile import NamedTemporaryFile
 
@@ -9,13 +10,25 @@ from tempfile import NamedTemporaryFile
 
 class KernelBundle():
 
-	__slots__ = ("name", "build_id", "default", "fallback")
+	__slots__ = ("name", "build_id", "default", "fallback", "preset")
 
-	def __init__(self, name, build_id, fallback):
+	def __init__(self, name, build_id):
 		self.name = name
 		self.build_id = build_id
-		self.fallback = fallback
 		self.default = False
+		self.preset = None
+
+	@property
+	def path(self):
+		return join(self.preset.path_root, self.preset.name, self.name) if self.preset else self.name
+
+	@property
+	def currently_used(self):
+		if not self.preset:
+			raise RuntimeError("Cannot determine current usage without parent preset")
+
+		current_kernel = join(self.preset.root_path, "kernel.efi")
+		return cmp(current_kernel, self.path) if isfile(current_kernel) else False
 
 	@staticmethod
 	def from_bundle(bundle_path):
@@ -26,13 +39,12 @@ class KernelBundle():
 			fp.seek(0)
 			params = envfile_to_params(fp.read())
 
+		bundle = KernelBundle(basename(bundle_path), int(params["BUILD_ID"]))
 		fallback_path = splitext(bundle_path)[0]
+		if fallback_path:
+			bundle.fallback = fallback_path if isdir(fallback_path) else None
 
-		return KernelBundle(
-			basename(bundle_path),
-			int(params["BUILD_ID"]),
-			fallback_path if isdir(fallback_path) else None
-		)
+		return bundle
 
 class KernelPreset():
 
@@ -44,10 +56,16 @@ class KernelPreset():
 		self.path_root = path_root
 		self.path_kernel = path_kernel
 		self.path_initramfs = path_initramfs
+		for item in bundles:
+			item.preset = self
 
 	@property
 	def last_build_id(self):
 		return max(map(lambda x: x.build_id, self.bundles)) if len(self.bundles) else None
+
+	@property
+	def currently_used(self):
+		return any(x.currently_used for x in self.bundles)
 
 	@staticmethod
 	def from_preset(name, root_path):
@@ -66,7 +84,7 @@ class KernelPreset():
 		path_bundles = "{0}/{1}".format(root_path, name)
 
 		if isdir(path_bundles):
-			bundles = list(KernelBundle.from_bundle(item.path) for item in scandir(path_bundles) if item.is_file() and item.name.endswith(".efi"))
+			bundles = sorted(lambda x: x.build_id, KernelBundle.from_bundle(item.path) for item in scandir(path_bundles) if item.is_file() and item.name.endswith(".efi"))
 		else:
 			bundles = []
 
