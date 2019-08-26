@@ -36,42 +36,47 @@ class KernelBundle():
 
 class KernelPreset():
 
-	__slots__ = ("bundles", "preset", "path_root", "path_kernel", "path_initramfs")
+	__slots__ = ("bundles", "name", "path_root", "path_kernel", "path_initramfs")
 
-	def __init__(self, preset, bundles, path_root, path_kernel, path_initramfs):
-		self.preset = preset
+	def __init__(self, name, bundles, path_root, path_kernel, path_initramfs):
+		self.name = name
 		self.bundles = bundles
 		self.path_root = path_root
 		self.path_kernel = path_kernel
 		self.path_initramfs = path_initramfs
 
 	@property
-	def recent_build_id(self):
+	def last_build_id(self):
 		return max(map(lambda x: x.build_id, self.bundles)) if len(self.bundles) else None
 
 	@staticmethod
-	def from_preset(preset, root_path):
+	def from_preset(name, root_path):
 
 		# First, check if preset exists for this version
-		preset_path = "/etc/mkinitcpio.d/{0}.preset".format(preset)
+		preset_path = "/etc/mkinitcpio.d/{0}.preset".format(name)
 		if not isfile(preset_path):
-			raise RuntimeError("{0} is not a valid kernel preset".format(preset))
+			raise RuntimeError("{0} is not a valid kernel preset".format(name))
 
 		with open(preset_path, mode="rt", encoding="utf8") as fp:
-			params = envfile_to_params(fp.read)
+			params = envfile_to_params(fp.read())
 			del preset_path
 
 		path_kernel = params["ALL_kver"]
 		path_initramfs = params["default_image"]
-		bundles = list(KernelBundle.from_bundle(item.path) for item in scandir("{0}/{1}".format(root_path, preset)) if item.is_file() and item.name.endswith(".efi"))
+		path_bundles = "{0}/{1}".format(root_path, name)
 
-		return KernelPreset(preset, bundles, root_path, path_kernel, path_initramfs)
+		if isdir(path_bundles):
+			bundles = list(KernelBundle.from_bundle(item.path) for item in scandir(path_bundles) if item.is_file() and item.name.endswith(".efi"))
+		else:
+			bundles = []
+
+		return KernelPreset(name, bundles, root_path, path_kernel, path_initramfs)
 
 def initialise(root_path):
 
 	db = {}
 
-	for item in os.scandir("/etc/mkinitcpio.d"):
+	for item in scandir("/etc/mkinitcpio.d"):
 		if item.is_file() and item.name.endswith(".preset"):
 
 			identifier = splitext(item.name)[0]

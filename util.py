@@ -33,3 +33,23 @@ def envfile_to_params(data):
 
 	params = filter(lambda x: len(x) == 2, map(lambda x: x.split("="), data.splitlines()))
 	return { k: v[1:-1] if v.startswith('"') and v.endswith('"') else v for (k, v) in params }
+
+class TempFileMap():
+
+	__slots__ = ("_tmpfiles")
+
+	def __init__(self, **kwargs):
+		self._tmpfiles = kwargs
+
+	def __enter__(self):
+		return self
+
+	def __exit__(self, x, y, z):
+		for file in self._tmpfiles.values():
+			file.close()
+
+	def __getattr__(self, name):
+		if name in self._tmpfiles:
+			return self._tmpfiles[name]
+		else:
+			raise AttributeError("{0} is not an available temporary file".format(name))
