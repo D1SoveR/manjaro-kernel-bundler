@@ -5,14 +5,14 @@ import os
 import os.path
 import subprocess
 
-from db import KernelBundle
+from .db import KernelBundle
 import gzip
 from math import floor
 from os import makedirs, remove, stat
 from os.path import join
 from shutil import copyfile, rmtree
 from tempfile import NamedTemporaryFile
-from util import run, TempFileMap
+from .util import run, TempFileMap
 
 UCODE_FILE="/boot/amd-ucode.img"
 CMDLINE_FILE="/boot/cmdline.txt"

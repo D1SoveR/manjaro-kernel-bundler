@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
 import argparse
-from bundle import generate_bundle_for_preset, make_currently_used, delete_old_bundles
-from db import initialise
+from .bundle import generate_bundle_for_preset, make_currently_used, delete_old_bundles
+from .db import initialise
 
 def command_list(input):
 	if input != "list" and input != "bundle":
 		raise RuntimeError("Command needs to be one of: list, bundle")
 	return input
 
-if __name__ == "__main__":
+def main():
 
 	parser = argparse.ArgumentParser(description="Script helping with managing kernel bundles on EFI system partition.")
 	parser.add_argument("--root", metavar="DIRECTORY", action="store", default="/boot/efi/EFI/Manjaro", required=False, help="Which directory should be used as base for all the kernel bundles")
@@ -42,3 +42,6 @@ if __name__ == "__main__":
 				if preset.currently_used:
 					make_currently_used(preset)
 				delete_old_bundles(preset, 3)
+
+if __name__ == "__main__":
+	main()

@@ -1,7 +1,7 @@
 from filecmp import cmp
 from os import scandir
 from os.path import basename, isfile, isdir, join, splitext
-from util import run, envfile_to_params
+from .util import run, envfile_to_params
 from tempfile import NamedTemporaryFile
 
 # Collection of classes and methods to generate database of current
@@ -84,7 +84,7 @@ class KernelPreset():
 		path_bundles = "{0}/{1}".format(root_path, name)
 
 		if isdir(path_bundles):
-			bundles = sorted(lambda x: x.build_id, KernelBundle.from_bundle(item.path) for item in scandir(path_bundles) if item.is_file() and item.name.endswith(".efi"))
+			bundles = sorted(lambda x: x.build_id, (KernelBundle.from_bundle(item.path) for item in scandir(path_bundles) if item.is_file() and item.name.endswith(".efi")))
 		else:
 			bundles = []
 
