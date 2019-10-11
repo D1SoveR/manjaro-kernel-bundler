@@ -36,6 +36,22 @@ def envfile_to_params(data):
 
 class TempFileMap():
 
+	"""
+	Helper for managing multiple temporary files with help of context "with" syntax:
+
+	with TempFileMap(
+		foo=NamedTemporaryFile(mode="w+t", encoding="utf-8"),
+		bar=TemporaryFile(mode="w+b")
+	) as tmpfiles:
+
+		foo.write("spam")
+		bar.write(b"ham")
+
+		print(foo.flush() and foo.seek(0) and foo.read()) # prints "spam"
+
+	print("All of the temporary files are correctly closed now")
+	"""
+
 	__slots__ = ("_tmpfiles")
 
 	def __init__(self, **kwargs):
