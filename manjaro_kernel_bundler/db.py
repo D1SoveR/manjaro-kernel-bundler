@@ -84,7 +84,7 @@ class KernelPreset():
 		path_bundles = "{0}/{1}".format(root_path, name)
 
 		if isdir(path_bundles):
-			bundles = sorted(lambda x: x.build_id, (KernelBundle.from_bundle(item.path) for item in scandir(path_bundles) if item.is_file() and item.name.endswith(".efi")))
+			bundles = sorted((KernelBundle.from_bundle(item.path) for item in scandir(path_bundles) if item.is_file() and item.name.endswith(".efi")), key=lambda x: x.build_id)
 		else:
 			bundles = []
 
