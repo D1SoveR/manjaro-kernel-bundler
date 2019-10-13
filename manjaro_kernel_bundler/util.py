@@ -32,7 +32,7 @@ def envfile_to_params(data):
 	}
 	"""
 
-	params = filter(lambda x: len(x) == 2, map(lambda x: x.split("="), data.splitlines()))
+	params = filter(lambda x: len(x) == 2, map(lambda x: x.strip().split("="), data.splitlines()))
 	return { k: v[1:-1] if v.startswith('"') and v.endswith('"') else v for (k, v) in params }
 
 def get_mountpoint_for(dir_path):
