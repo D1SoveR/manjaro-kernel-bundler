@@ -1,5 +1,6 @@
 # This file contains various helpers used throughout the kernel bundling code.
 
+from os.path import abspath, dirname, ismount
 import subprocess
 
 def run(commands):
@@ -33,6 +34,21 @@ def envfile_to_params(data):
 
 	params = filter(lambda x: len(x) == 2, map(lambda x: x.split("="), data.splitlines()))
 	return { k: v[1:-1] if v.startswith('"') and v.endswith('"') else v for (k, v) in params }
+
+def get_mountpoint_for(dir_path):
+
+	"""
+	This helper function returns the path of the mountpoint closest to the provided location.
+	For example, if the mountpoints are at /disks and /disks/foo/bar, and you provide path of
+	/disks/foo/bar/some/directory/inside, it will return /disks/foo/bar .
+	"""
+
+	dir_path = abspath(dir_path)
+	while True:
+		if ismount(dir_path):
+			break
+		dir_path = dirname(dir_path)
+	return dir_path
 
 class TempFileMap():
 
