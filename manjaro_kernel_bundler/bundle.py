@@ -101,7 +101,7 @@ def generate_fallback_for_preset(preset, build_id):
 	# Copy the kernel (requires addition of .efi extension to be properly recognised
 	# when being run from EFI shell), along with the initramfs and microcode
 	dest_kernel = join(output_dir, "{0}.efi".format(basename(preset.path_kernel)))
-	dest_initramfs = join(output_dir, basename(prset.path_initramfs))
+	dest_initramfs = join(output_dir, basename(preset.path_initramfs))
 	dest_ucode = join(output_dir, basename(UCODE_FILE))
 	copyfile(preset.path_kernel, dest_kernel)
 	copyfile(preset.path_initramfs, dest_initramfs)
@@ -133,7 +133,7 @@ def make_currently_used(preset):
 
 	if len(preset.bundles):
 		latest_bundle = preset.bundles[-1]
-		copyfile(latest_bundle.path, join(preset.path_root, "kernel.efi"))
+		copyfile(latest_bundle.path_bundle, join(preset.path_root, "kernel.efi"))
 		print("Made {0} of {1} preset currently used kernel bundle".format(latest_bundle.name, preset.name))
 	else:
 		print("{0} preset has no kernel bundles, skipping...".format(preset.name))
@@ -146,7 +146,7 @@ def delete_old_bundles(preset, number_to_keep=1):
 		preset.bundles = preset.bundles[-number_to_keep:]
 
 		for bundle in bundles_to_delete:
-			remove(bundle.path)
-			if bundle.fallback:
-				rmtree(bundle.fallback)
+			remove(bundle.path_bundle)
+			if bundle.path_fallback:
+				rmtree(bundle.path_fallback)
 		print("removed {0} outdated bundles for {1} preset".format(len(bundles_to_delete), preset.name))

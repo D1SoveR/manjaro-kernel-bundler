@@ -82,8 +82,8 @@ class KernelBundle():
 		if not self.preset:
 			raise RuntimeError("Cannot determine current usage without parent preset")
 
-		current_kernel = join(self.preset.root_path, "kernel.efi")
-		return cmp(current_kernel, self.path) if isfile(current_kernel) else False
+		current_kernel = join(self.preset.path_root, "kernel.efi")
+		return cmp(current_kernel, self.path_bundle) if isfile(current_kernel) else False
 
 	@staticmethod
 	def from_bundle(bundle_path):
