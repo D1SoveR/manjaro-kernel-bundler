@@ -26,7 +26,7 @@ def main():
 				if len(preset.bundles):
 					print(" * Following bundles exist for {0}:".format(preset.name))
 					for bundle in preset.bundles:
-						print("   - {0}".format(bundle.name))
+						print("   - {0}{1}".format(bundle.name, " (currently used)" if bundle.currently_used else ""))
 				else:
 					print(" * {0}: No kernel bundles at a time".format(preset.name))
 		else:
@@ -35,7 +35,7 @@ def main():
 	elif params.command == "bundle":
 
 		for preset in db.values():
-			new_bundle = generate_bundle_for_preset(preset)
+			new_bundle = generate_bundle_for_preset(preset, True)
 			if new_bundle:
 				new_bundle.preset = preset
 				preset.bundles.append(new_bundle)
