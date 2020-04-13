@@ -4,7 +4,7 @@ from .db import KernelBundle
 import gzip
 from math import floor
 from os import makedirs, remove, stat
-from os.path import basename, join, relpath, splitext
+from os.path import basename, isfile, join, relpath, splitext
 from shutil import copyfile, rmtree
 from tempfile import NamedTemporaryFile
 from .util import get_mountpoint_for, run, TempFileMap
@@ -12,7 +12,7 @@ from .util import get_mountpoint_for, run, TempFileMap
 UCODE_FILE="/boot/amd-ucode.img"
 CMDLINE_FILE="/boot/cmdline.txt"
 
-def generate_bundle_for_preset(preset, generate_fallback=True):
+def generate_bundle_for_preset(preset, sb_dir, generate_fallback=True):
 
 	# Very first thing, verify if bundle needs to be generated for this preset
 	# (it could be that there was no change to any of the bundled files, and thus
@@ -35,7 +35,8 @@ def generate_bundle_for_preset(preset, generate_fallback=True):
 	with TempFileMap(
 		cmdline=NamedTemporaryFile(mode="w+t", encoding="utf8"),
 		osrel=NamedTemporaryFile(mode="w+t", encoding="utf8"),
-		initrd=NamedTemporaryFile(mode="w+b")
+		initrd=NamedTemporaryFile(mode="w+b"),
+		bundle=NamedTemporaryFile(mode="w+b")
 	) as tmpfiles:
 
 		# Generate command-line
@@ -84,9 +85,37 @@ def generate_bundle_for_preset(preset, generate_fallback=True):
 			"--add-section",   ".linux={0}".format(preset.path_kernel),    "--change-section-vma",   ".linux=0x2000000",
 			"--add-section",  ".initrd={0}".format(tmpfiles.initrd.name),  "--change-section-vma",  ".initrd=0x3000000",
 			"/usr/lib/systemd/boot/efi/linuxx64.efi.stub",
-			output_file
+			tmpfiles.bundle.name
 		])
-		print("kernel bundle generated at {0}\n".format(output_file))
+		print("kernel bundle generated")
+
+		# Sign the bundle for Secure Boot
+		# ========================================================================
+		# Verify that the keys are available, and sign.
+
+		output_dir = join(preset.path_root, preset.name)
+		output_file = join(output_dir, bundle_name)
+		makedirs(output_dir, exist_ok=True)
+
+		if (
+			isfile(join(sb_dir, "db.key")) and
+			isfile(join(sb_dir, "db.crt"))
+		):
+
+			run([
+				"sbsign",
+				"--key",  join(sb_dir, "db.key"),
+				"--cert", join(sb_dir, "db.crt"),
+				"--output", output_file,
+				tmpfiles.bundle.name
+			])
+			print("kernel bundle signed and saved at {0}\n".format(output_file))
+
+		else:
+
+			print("WARNING: unable to find Secure Boot key and certificate at {0}, skipping signing...".format(sb_dir))
+			copyfile(tmpfiles.bundle.name, output_file)
+			print("kernel bundle saved at {0}\n".format(output_file))
 
 		if generate_fallback:
 			generate_fallback_for_preset(preset, current_build_id)

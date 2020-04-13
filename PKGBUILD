@@ -2,7 +2,7 @@
 
 # Base package info
 pkgname="manjaro-kernel-bundler"
-pkgver=0.0.3
+pkgver=0.0.4
 pkgrel=1
 pkgdesc="CLI tool for bundling the Manjaro kernels, along with initramfs and kernel params for direct UEFI boot"
 url="https://github.com/D1SoveR/manjaro-kernel-bundler"
@@ -10,7 +10,7 @@ url="https://github.com/D1SoveR/manjaro-kernel-bundler"
 # Dependencies
 arch=("any")
 license=("custom:Public Domain")
-depends=("python")
+depends=("python" "sbsigntools")
 provides=("$pkgname")
 conflicts=("$pkgname")
 

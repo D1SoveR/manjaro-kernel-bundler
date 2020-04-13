@@ -13,6 +13,7 @@ def main():
 
 	parser = argparse.ArgumentParser(description="Script helping with managing kernel bundles on EFI system partition.")
 	parser.add_argument("--root", metavar="DIRECTORY", action="store", default="/boot/efi/EFI/Manjaro", required=False, help="Which directory should be used as base for all the kernel bundles")
+	parser.add_argument("--sb", metavar="KEY-DIRECTORY", action="store", default="/root/sb", required=False, help="Directory containing files `db.key` and `db.crt` for signing the bundle for Secure Boot")
 	parser.add_argument("command", metavar="list|bundle", action="store", type=command_list, help="Whether to list existing bundles, or attempt to create new ones")
 
 	params = parser.parse_args()
@@ -35,7 +36,7 @@ def main():
 	elif params.command == "bundle":
 
 		for preset in db.values():
-			new_bundle = generate_bundle_for_preset(preset, True)
+			new_bundle = generate_bundle_for_preset(preset, params.sb, True)
 			if new_bundle:
 				new_bundle.preset = preset
 				preset.bundles.append(new_bundle)
